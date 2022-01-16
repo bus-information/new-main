@@ -1,13 +1,5 @@
 <resources>
     <string name="app_name">運行情報お知らせアプリ</string>
     <string name="title">type-alpha</string>
-    <string name="now_pojit">現在位置</string>
-    <string name="drive_start">運行を開始</string>
-    <string name="select">路線選択</string>
-    <string name="route_c">ROUTEC</string>
-    <string name="route_d">ROUTED</string>
-    <string name="route_b">ROUTEB</string>
-    <string name="route_a">ROUTEA</string>
-    <string name="start_button">運行を開始する場合下のボタンを押してください</string>
     <string name="togglebutton">ToggleButton</string>
 </resources>
