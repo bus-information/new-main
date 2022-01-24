@@ -7,6 +7,15 @@
     android:background="#dfe4ea"
     tools:context=".MainActivity">
 
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="TextView"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="1dp"
+        tools:layout_editor_absoluteY="241dp" />
+
     <fragment
         android:id="@+id/mapView"
         android:name="com.google.android.gms.maps.SupportMapFragment"
@@ -25,11 +34,75 @@
         android:text="@string/togglebutton"
         android:textAlignment="center"
         android:textColor="#455A64"
+        android:textOff="マップにもどる"
+        android:textOn="路線選択"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <RadioGroup
+        android:id="@+id/RadioGroup"
+        android:layout_width="410dp"
+        android:layout_height="731dp"
+        android:background="#ffffff"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <RadioButton
+            android:id="@+id/radioButton2"
+            android:layout_width="200dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="100dp"
+            android:backgroundTint="#FFFFFF"
+            android:buttonTint="#000000"
+            android:text="@string/route_a"
+            android:textAlignment="center"
+            android:textColor="#ff7675"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <RadioButton
+            android:id="@+id/radioButton3"
+            android:layout_width="200dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="100dp"
+            android:buttonTint="#000000"
+            android:text="@string/route_b"
+            android:textAlignment="center"
+            android:textColor="#0984e3"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <RadioButton
+            android:id="@+id/radioButton4"
+            android:layout_width="200dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="100dp"
+            android:buttonTint="#000000"
+            android:text="@string/route_c"
+            android:textAlignment="center"
+            android:textColor="#00b894"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <RadioButton
+            android:id="@+id/radioButton5"
+            android:layout_width="200dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="100dp"
+            android:buttonTint="#000000"
+            android:text="@string/route_d"
+            android:textAlignment="center"
+            android:textColor="#fdcb6e"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+    </RadioGroup>
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

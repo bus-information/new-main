@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">運行情報お知らせアプリ</string>
     <string name="title">type-alpha</string>
-    <string name="togglebutton">ToggleButton</string>
+    <string name="route_c">okisen_up_1805</string>
+    <string name="route_d">nagakurasen_up_805</string>
+    <string name="route_b">hagishosen_down_1330</string>
+    <string name="route_a">hagishosen_down_800</string>
+    <string name="togglebutton">路線選択</string>
 </resources>

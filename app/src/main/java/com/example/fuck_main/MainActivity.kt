@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -18,6 +19,7 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import io.grpc.InternalChannelz.id
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -25,59 +27,38 @@ import kotlin.concurrent.schedule
 val db = Firebase.firestore
 
 
-
-
-
-
 var aId = "0"
 var tStamp = "0"
 var sId = "0"
+var temp = 0
+var staticName = ""
 
 
-
-
-
-
-/*bus stop lat-lng array zone バス停の位置情報*/
+//bus stop lat-lng array zone バス停の位置情報
 var bus_stop_locate = arrayOfNulls<LatLng>(50)
 
-/*bus stop name zone バス停の名前*/
+//bus stop name zone バス停の名前
 var bus_stop_name = arrayOfNulls<String>(50)
 
-/*bus locate lat-lng array zone バスの現在位置*/
-var bus_locate= arrayOfNulls<LatLng>(10)
+//bus locate lat-lng array zone バスの現在位置
+var bus_locate = arrayOfNulls<LatLng>(10)
 
-/*bus time array zone*/
+//bus time array zone バスの到着予想時刻格納用
 var bus_time_info = arrayOfNulls<String>(50)
 
-
-
-
-
-
-
-
-class MainActivity : AppCompatActivity(),OnMapReadyCallback {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var callback: LocationCallback
 
 
+    //ベータ版特有のスイッチを管理するフラグ
+    private var testSw = false
 
-
-
-
-
-    //Test SW TF
-    var test_sw = false
-    //map setting
+    //マップの定義
     private lateinit var mMap: GoogleMap
 
 
-
-
-
-
-    //first moving
+    //初回動作
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -86,21 +67,36 @@ class MainActivity : AppCompatActivity(),OnMapReadyCallback {
             .findFragmentById(R.id.mapView) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        // test button first moving
+        // ベータ版ボタンの初期動作
         val getButton: ToggleButton = findViewById(R.id.toggleButton)
-        var timerCallback1: TimerTask.() -> Unit = {
-            fetchLatestLocation()
-            reload_map(mMap)
+        val timerCallback1: TimerTask.() -> Unit = {
+            getInformation()
+            reloadMap(mMap)
         }
 
 
-        // test button tf checking
+        // フラグチェッカー
         getButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                test_sw = true
-                Timer().schedule(0, 1000, timerCallback1)
+                testSw = true
+                val radioGroup = findViewById<RadioGroup>(R.id.RadioGroup)
+                radioGroup.visibility=View.INVISIBLE
+                Timer().schedule(0, 5000, timerCallback1)
             } else if (!isChecked) {
-                test_sw = false
+                val radioGroup = findViewById<RadioGroup>(R.id.RadioGroup)
+                radioGroup.visibility=View.VISIBLE
+                bus_stop_name= arrayOfNulls(50)
+                bus_locate= arrayOfNulls(50)
+                bus_stop_locate= arrayOfNulls(50)
+                bus_time_info= arrayOfNulls(50)
+
+                 aId = "0"
+                 tStamp = "0"
+                 sId = "0"
+                 temp = 0
+                 staticName = ""
+
+                testSw = false
             }
         }
 
@@ -112,55 +108,8 @@ class MainActivity : AppCompatActivity(),OnMapReadyCallback {
     }
 
 
-
-
-
-
-    // first map drawer
+    // マップ初回描画など
     override fun onMapReady(googleMap: GoogleMap?) {
-        if (googleMap != null)
-        {
-            mMap = googleMap
-        }
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        )
-        {
-            return
-        }
-        val last_locate = fusedLocationProviderClient.lastLocation
-        last_locate.addOnSuccessListener {
-
-            //now location
-            var now_pojit = LatLng(it.latitude, it.longitude)
-
-
-            //drawing now location point
-            mMap.addMarker(MarkerOptions().position(now_pojit).title("現在地")
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuck)))
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(now_pojit, 20f))
-        }
-        val locationRequest = createLocationRequest() ?: return
-        fusedLocationProviderClient.requestLocationUpdates(
-            locationRequest,
-            callback,
-            null
-        )
-    }
-
-
-
-
-
-
-
-    //reload map drawer
-    private fun reload_map(googleMap: GoogleMap?) {
         if (googleMap != null) {
             mMap = googleMap
         }
@@ -171,48 +120,109 @@ class MainActivity : AppCompatActivity(),OnMapReadyCallback {
                 this,
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val lastLocate = fusedLocationProviderClient.lastLocation
+        lastLocate.addOnSuccessListener {
+
+            //現在地の算出
+            val nowPosit = LatLng(it.latitude, it.longitude)
+
+
+            //現在地のポイントをマップ上に描画
+            mMap.addMarker(
+                MarkerOptions().position(nowPosit).title("現在地")
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuck))
+            )
+            //現在地までカメラ移動
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(nowPosit, 20f))
+        }
+        val locationRequest = createLocationRequest() ?: return
+        fusedLocationProviderClient.requestLocationUpdates(
+            locationRequest,
+            callback,
+            null
         )
-        {
+    }
+
+
+    //2回目以降のマップ描画
+    private fun reloadMap(googleMap: GoogleMap?) {
+        if (googleMap != null) {
+            mMap = googleMap
+        }
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             return
         }
         val ll = fusedLocationProviderClient.lastLocation
         ll.addOnSuccessListener {
 
             // 現在位置取得
-            var now_posit = LatLng(it.latitude, it.longitude)
+            val nowPosit = LatLng(it.latitude, it.longitude)
 
-            //マップ上のポインター削除
+            //マップ上に残っているポインター削除
             mMap.clear()
 
-            // now position redrawing 現在位置再描画
-            mMap.addMarker(MarkerOptions().position(now_posit).title("現在地")
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuck)))
+            // 現在位置のポイントを再描画
+            mMap.addMarker(
+                MarkerOptions().position(nowPosit).title("現在地")
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuck))
+            )
+            if (temp == 0) {
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(nowPosit, 20f))
+                temp++
+            }
 
-            // now bus position redrawing バス現在位置再描画
-            for (i in 0.. (bus_locate.size)-1) {
+            //バス現在位置のポイントを再描画
+            for (i in 0 until (bus_locate.size)) {
                 if (bus_locate[i] != null) {
                     mMap.addMarker(
-                        MarkerOptions().position(bus_locate[i]).title("バス" + "1")
+                        MarkerOptions().position(bus_locate[i]).title("バス$i")
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.busicon))
                     )
                 }
             }
 
-            // bus stop location & limit second バス停位置描画
-            for (i in 0..(bus_stop_locate.size)-1)
-            {
-                if(bus_stop_locate[i]!=null&& bus_time_info!=null) {
-                    mMap.addMarker(
-                        MarkerOptions().position(bus_stop_locate[i])
-                            .title("バス停" + bus_stop_name[i] + "まであと" + bus_time_info[i])
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.busstop))
-                    )
+            //バス停位置の再描画
+            for (i in 0 until (bus_stop_name.size)) {
+                if (bus_stop_locate[i] != null) {
+                    var tempSec = bus_time_info[i]?.toIntOrNull()
+                    if (tempSec != null&&tempSec>0) {
+                        mMap.addMarker(
+                            MarkerOptions().position(bus_stop_locate[i] as LatLng)
+                                .title("バス停" + bus_stop_name[i] + "まであと" +(tempSec/86400)+"時間"+(tempSec%3600)/60+"分"+tempSec%60+"秒")
+                                //.title("バス停" + bus_stop_name[i] + "まであと"+ bus_time_info[i]+"秒")
+                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.busstop))
+                        )
+                    }
+                    else{
+                        mMap.addMarker(
+                            MarkerOptions().position(bus_stop_locate[i] as LatLng)
+                                .title("バス停" + bus_stop_name[i] + "は通り過ぎたか運行が終了しています")
+                                //.title("バス停" + bus_stop_name[i] + "まであと"+ bus_time_info[i]+"秒")
+                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.busstop))
+                        )
+                    }
                 }
             }
         }
+
     }
 
-    private fun fetchLatestLocation() {
+    //サーバーからバスの位置やバス停情報などを取得する
+    private fun getInformation() {
+        val radioGroup = findViewById<RadioGroup>(R.id.RadioGroup)
+        val id = radioGroup.checkedRadioButtonId
+        val checkedRadioButton = findViewById<RadioButton>(id)
+        staticName = checkedRadioButton.text as String
         val latestLocation = fusedLocationProviderClient.lastLocation
 
         if (ActivityCompat.checkSelfPermission(
@@ -259,13 +269,12 @@ class MainActivity : AppCompatActivity(),OnMapReadyCallback {
         } else {
             latestLocation.addOnSuccessListener {
 
-                if (test_sw) {
+                if (testSw) {
                     if (it != null) {
 
-
-
+                        //バスの現在位置の最新状態をサーバーから取得
                         db.collection("bus")
-                            .document("newestData")
+                            .document(staticName)
                             .get()
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
@@ -281,75 +290,73 @@ class MainActivity : AppCompatActivity(),OnMapReadyCallback {
                                     }
                                 }
                             }
-
-
-
-
+                        //バス停へのバス到着予想時刻を予測
                         db.collection("arrivalTimes")
-                            .document(sId)
+                            .document(aId)
                             .get()
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
                                     val document = task.result
 
-                                    for(i in 0..(bus_time_info.size)-1) {
+                                    for (i in 0 until (bus_time_info.size)) {
                                         if (document != null && document.data != null) {
-                                            var bus_time_name: String = "station$i"
-                                            println(bus_time_name)
-                                            println(document.data?.get(bus_time_name).toString())
-                                            bus_time_info[i] = document.data?.get(bus_time_name).toString()
+                                            val busTimeName = bus_stop_name[i]
+                                            println(busTimeName)
+                                            println(document.data?.get(busTimeName).toString())
+                                            bus_time_info[i] =
+                                                document.data?.get(busTimeName).toString()
                                         }
                                     }
 
                                 }
                             }
-
-
 
 
                         // バス停の名前を取得
+                        println(staticName)
                         db.collection("stationsNames")
-                            .document("hagisyosen_down_800")
+                            .document(staticName)
                             .get()
-                            .addOnCompleteListener{task ->
-                                if(task.isSuccessful)
-                                {
+                            .addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
                                     val document = task.result
                                     //バス停の名前を取得
-                                    for(i in 0..(bus_stop_name.size)-1) {
+                                    for (i in 0 until (bus_stop_name.size)) {
                                         if (document != null && document.data != null) {
-                                            var subname = i.toString()
-                                            if(document.data?.get(subname)!=null) {
+                                            val subName = i.toString()
+                                            if (document.data?.get(subName) != null) {
                                                 bus_stop_name[i] =
-                                                    document.data?.get(subname).toString()
+                                                    document.data?.get(subName).toString()
                                             }
-                                            //println(document.data?.get(subname).toString())
                                         }
                                     }
                                 }
                             }
 
 
-
-
+                        //バス停の位置情報
                         db.collection("stations")
-                            .document("hagishosen_down_800")
+                            .document(staticName)
                             .get()
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
                                     val document = task.result
 
                                     // バス停の位置情報を再取得
-                                    for (i in 0..(bus_stop_locate.size)-1) {
-                                        if (document != null && document.data != null&& bus_stop_name[i]!=null) {
+                                    for (i in 0 until (bus_stop_locate.size)) {
+                                        if (document != null && document.data != null && bus_stop_name[i] != null) {
                                             println(bus_stop_name[i])
-                                            val geoPoint = document.data?.get(bus_stop_name[i]) as List<*>
-                                            if(geoPoint[1]!="") {
+                                            val geoPoint =
+                                                document.data?.get(bus_stop_name[i]) as List<*>
+                                            if (geoPoint[1] != "") {
                                                 val lat = (geoPoint[1] as GeoPoint)!!.latitude
                                                 val lng = (geoPoint[1] as GeoPoint)!!.longitude
                                                 bus_stop_locate[i] = LatLng(lat, lng)
+
                                             }
-                                            //print(bus_stop_locate[i])
+                                            else{
+                                                errorFinish("geoPointNotSet")
+                                            }
                                         }
                                     }
 
@@ -357,11 +364,8 @@ class MainActivity : AppCompatActivity(),OnMapReadyCallback {
                             }
 
 
-
-
-                    }
-                    else if (!test_sw) {
-                        println("fuck")
+                    } else if (!testSw) {
+                        println("fuck") //エラー文のつもり
                     }
                     val locationRequest = createLocationRequest() ?: return@addOnSuccessListener
                     fusedLocationProviderClient.requestLocationUpdates(
@@ -374,6 +378,13 @@ class MainActivity : AppCompatActivity(),OnMapReadyCallback {
 
         }
     }
+
+    private fun errorFinish(errorCode : String)
+    {
+        Toast.makeText(applicationContext, "エラーコード $errorCode のため終了します", Toast.LENGTH_LONG).show()
+        moveTaskToBack (true)
+    }
+
     private fun createLocationRequest(): LocationRequest? {
         return LocationRequest.create().apply {
             interval = 10000
