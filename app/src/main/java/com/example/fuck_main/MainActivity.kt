@@ -2,8 +2,10 @@ package com.example.fuck_main
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ContentValues.TAG
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -164,21 +166,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
         val ll = fusedLocationProviderClient.lastLocation
         ll.addOnSuccessListener {
+            if(it == null){
+                Toast.makeText(applicationContext, "現在位置が取得できません", Toast.LENGTH_SHORT).show()
+            }else{
+                // 現在位置取得
+                val nowPosit = LatLng(it.latitude, it.longitude)
 
-            // 現在位置取得
-            val nowPosit = LatLng(it.latitude, it.longitude)
+                //マップ上に残っているポインター削除
+                mMap.clear()
 
-            //マップ上に残っているポインター削除
-            mMap.clear()
-
-            // 現在位置のポイントを再描画
-            mMap.addMarker(
-                MarkerOptions().position(nowPosit).title("現在地")
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuck))
-            )
-            if (temp == 0) {
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(nowPosit, 20f))
-                temp++
+                // 現在位置のポイントを再描画
+                mMap.addMarker(
+                    MarkerOptions().position(nowPosit).title("現在地")
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.fuck))
+                )
+                if (temp == 0) {
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(nowPosit, 20f))
+                    temp++
+                }
             }
 
             //バス現在位置のポイントを再描画
@@ -195,10 +200,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             for (i in 0 until (bus_stop_name.size)) {
                 if (bus_stop_locate[i] != null) {
                     var tempSec = bus_time_info[i]?.toIntOrNull()
-                    if (tempSec != null&&tempSec>0) {
+                    if (tempSec != null && tempSec > 0) {
                         mMap.addMarker(
                             MarkerOptions().position(bus_stop_locate[i] as LatLng)
-                                .title("バス停" + bus_stop_name[i] + "まであと" +(tempSec/86400)+"時間"+(tempSec%3600)/60+"分"+tempSec%60+"秒")
+                                .title("バス停" + bus_stop_name[i] + "まであと" +(tempSec/3600)+"時間"+(tempSec%3600)/60+"分"+tempSec%60+"秒")
                                 //.title("バス停" + bus_stop_name[i] + "まであと"+ bus_time_info[i]+"秒")
                                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.busstop))
                         )
@@ -289,6 +294,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                         bus_locate[0] = LatLng(lat, lng)
                                     }
                                 }
+                                else{
+                                    Log.d(TAG, "データがありません")
+                                    Toast.makeText(applicationContext, "バスの現在位置のデータがありません", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            .addOnFailureListener { exception ->
+                                Log.d(TAG, "データを取得できませんでした:", exception)
+                                Toast.makeText(applicationContext, "バスの現在位置を取得できません", Toast.LENGTH_LONG).show()
                             }
                         //バス停へのバス到着予想時刻を予測
                         db.collection("arrivalTimes")
@@ -303,12 +316,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                             val busTimeName = bus_stop_name[i]
                                             println(busTimeName)
                                             println(document.data?.get(busTimeName).toString())
-                                            bus_time_info[i] =
-                                                document.data?.get(busTimeName).toString()
+                                            bus_time_info[i] = document.data?.get(busTimeName).toString()
                                         }
                                     }
 
                                 }
+                                else{
+                                    Log.d(TAG, "データがありません")
+                                    Toast.makeText(applicationContext, "到着予想時刻のデータがありません", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            .addOnFailureListener { exception ->
+                                Log.d(TAG, "データを取得できませんでした:", exception)
+                                Toast.makeText(applicationContext, "到着予想時刻を取得できませんでした", Toast.LENGTH_LONG).show()
                             }
 
 
@@ -331,6 +351,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                         }
                                     }
                                 }
+                                else{
+                                    Log.d(TAG, "データがありません")
+                                    Toast.makeText(applicationContext, "バス停名のデータがありません", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            .addOnFailureListener { exception ->
+                                Log.d(TAG, "データを取得できませんでした:", exception)
+                                Toast.makeText(applicationContext, "バス停名が取得できません", Toast.LENGTH_LONG).show()
                             }
 
 
@@ -361,6 +389,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     }
 
                                 }
+                                else{
+                                    Log.d(TAG, "データがありません")
+                                    Toast.makeText(applicationContext, "バス停の位置情報がありません", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            .addOnFailureListener { exception ->
+                                Log.d(TAG, "バス停の位置情報を取得できません", exception)
                             }
 
 
